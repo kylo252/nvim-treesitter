@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'ci-fix-print'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
@@ -19,30 +20,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-latest]
-        cc: [ gcc, clang ]
+        # os: [ubuntu-latest, windows-2022, macos-latest]
+        os: [ windows-2022 ]
+        cc: [ gcc ]
         nvim_tag: [ stable ]
-        exclude:
-          - os: ubuntu-latest
-            cc: clang
-            nvim_tag: stable
-
-          - os: macos-latest
-            cc: gcc
-            nvim_tag: stable
-
-          - os: windows-2022
-            cc: clang
-            nvim_tag: stable
-
-        include:
-          - os: windows-2022
-            cc: cl
-            nvim_tag: stable
-
-          - os: ubuntu-latest
-            cc: gcc
-            nvim_tag: nightly
 
     name: Parser compilation
     runs-on: ${{ matrix.os }}
@@ -54,6 +35,7 @@ jobs:
       - uses: actions/setup-node@v2
 
       - name: Install and prepare Neovim
+        if: matrix.os == 'windows-2022'
         env:
           NVIM_TAG: ${{ matrix.nvim_tag }}
           TREE_SITTER_CLI_TAG: v0.20.4
@@ -61,6 +43,7 @@ jobs:
           bash ./scripts/ci-install-${{ matrix.os }}.sh
 
       - name: Setup Parsers Cache
+        if: matrix.os == 'windows-2022'
         id: parsers-cache
         uses: actions/cache@v2
         with:
@@ -69,10 +52,10 @@ jobs:
             ~/AppData/Local/nvim/pack/nvim-treesitter/start/nvim-treesitter/parser/
           key: ${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.nvim_tag }}-parsers-v1-${{ hashFiles('./lockfile.json', './lua/nvim-treesitter/parsers.lua', './lua/nvim-treesitter/install.lua', './lua/nvim-treesitter/shell_selectors.lua') }}
 
-      - name: Compile parsers Unix like
-        if: matrix.os != 'windows-2022'
-        run: |
-          nvim --headless -c "TSInstallSync all" -c "q"
+      # - name: Compile parsers Unix like
+      #   if: matrix.os != 'windows-2022'
+      #   run: |
+      #     nvim --headless -c "TSInstallSync all" -c "q"
 
       - name: Compile parsers Windows
         if: matrix.os == 'windows-2022'
@@ -84,9 +67,9 @@ jobs:
         run: cp -r ~/AppData/Local/nvim/pack/nvim-treesitter/start/nvim-treesitter/parser/* parser
         shell: bash
 
-      - name: Check query files (Unix)
-        if: matrix.os != 'windows-2022'
-        run: nvim --headless -c "luafile ./scripts/check-queries.lua" -c "q"
+      # - name: Check query files (Unix)
+      #   if: matrix.os != 'windows-2022'
+      #   run: nvim --headless -c "luafile ./scripts/check-queries.lua" -c "q"
 
       - name: Check query files (Windows)
         if: matrix.os == 'windows-2022'
